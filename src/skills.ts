@@ -36,7 +36,12 @@ export async function ensureSkillsRepo(): Promise<void> {
 
 const GLOBAL_SKILLS = ['branch-naming.md'];
 
-export async function loadSkills(repoType: RepoType): Promise<string> {
+export interface LoadedSkills {
+  content: string;
+  fileNames: string[];
+}
+
+export async function loadSkills(repoType: RepoType): Promise<LoadedSkills> {
   await ensureSkillsRepo();
 
   const skillsDir = path.resolve(config.skillsRepoPath, SKILLS_SUBDIR);
@@ -49,7 +54,7 @@ export async function loadSkills(repoType: RepoType): Promise<string> {
 
   // Repo-type-specific skills
   const prefix = repoType === 'frontend' ? 'fe-' : 'be-';
-  let typedFiles = fs
+  const typedFiles = fs
     .readdirSync(skillsDir)
     .filter((f) => f.startsWith(prefix) && (f.endsWith('.md') || f.endsWith('.txt')))
     .sort();
@@ -62,16 +67,15 @@ export async function loadSkills(repoType: RepoType): Promise<string> {
   const allFiles = [...new Set([...globalFiles, ...typedFiles])];
 
   logger.info(`Loaded ${allFiles.length} skill(s) for ${repoType}: ${allFiles.join(', ')}`);
-  return loadSkillFiles(skillsDir, allFiles);
-}
 
-function loadSkillFiles(dir: string, files: string[]): string {
-  return files
+  const content = allFiles
     .map((file) => {
-      const content = fs.readFileSync(path.join(dir, file), 'utf-8');
-      return `### Skill: ${file}\n\n${content}`;
+      const fileContent = fs.readFileSync(path.join(skillsDir, file), 'utf-8');
+      return `### Skill: ${file}\n\n${fileContent}`;
     })
     .join('\n\n---\n\n');
+
+  return { content, fileNames: allFiles };
 }
 
 // Reset sync flag so next request pulls latest skills
