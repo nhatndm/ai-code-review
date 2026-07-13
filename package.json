@@ -10,11 +10,13 @@
     "lint": "eslint src --ext .ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
-    "@google/generative-ai": "^0.24.1",
+    "@anthropic-ai/vertex-sdk": "^0.11.3",
+    "@aws-sdk/client-secrets-manager": "^3.716.0",
+    "@google-cloud/vertexai": "^1.10.0",
     "axios": "^1.7.9",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "google-auth-library": "^9.15.1",
     "simple-git": "^3.27.0",
     "winston": "^3.17.0"
   },
@@ -23,5 +25,6 @@
     "@types/node": "^22.10.7",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.7.3"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

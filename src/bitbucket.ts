@@ -37,12 +37,18 @@ export class BitbucketClient {
   private client: AxiosInstance;
   private workspace: string;
 
-  constructor(accessToken: string, workspace: string) {
+  /**
+   * Authenticates with a single Atlassian API token (email + token) via HTTP
+   * Basic auth, per https://support.atlassian.com/bitbucket-cloud/docs/using-api-tokens/.
+   * One token covers every repo the account has access to — no per-repo tokens.
+   */
+  constructor(email: string, apiToken: string, workspace: string) {
     this.workspace = workspace;
+    const basicAuth = Buffer.from(`${email}:${apiToken}`).toString('base64');
     this.client = axios.create({
       baseURL: 'https://api.bitbucket.org/2.0',
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Basic ${basicAuth}`,
         'Content-Type': 'application/json',
       },
     });

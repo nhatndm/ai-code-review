@@ -1,8 +1,20 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { AnthropicVertex } from '@anthropic-ai/vertex-sdk';
+import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleAuth } from 'google-auth-library';
 import { config, RepoType, AiProvider } from './config';
 import { loadSkills } from './skills';
 import { logger } from './logger';
+
+const GOOGLE_AUTH_SCOPES = ['https://www.googleapis.com/auth/cloud-platform'];
+
+// Wrap the in-memory service account credentials loaded from AWS Secrets
+// Manager (see src/secrets.ts) so neither Vertex AI client needs to read
+// GOOGLE_APPLICATION_CREDENTIALS or any file from disk.
+function googleAuthOptions() {
+  return config.gcpCredentials
+    ? { credentials: config.gcpCredentials, scopes: GOOGLE_AUTH_SCOPES }
+    : undefined;
+}
 
 function buildSystemPrompt(skillFileNames: string[]): string {
   const skillList = skillFileNames.map((f) => `- ${f}`).join('\n');
@@ -89,7 +101,16 @@ export interface ReviewResult {
 }
 
 async function reviewWithAnthropic(systemPrompt: string, userMessage: string): Promise<string> {
-  const client = new Anthropic({ apiKey: config.anthropicApiKey });
+  // Claude via Vertex AI — auth is the service account credentials loaded
+  // from AWS Secrets Manager, not an Anthropic API key. Vertex model IDs for
+  // current-generation models take no provider prefix or date suffix
+  // (e.g. "claude-opus-4-7").
+  const authOptions = googleAuthOptions();
+  const client = new AnthropicVertex({
+    projectId: config.gcpProjectId,
+    region: config.gcpLocation,
+    googleAuth: authOptions ? new GoogleAuth(authOptions) : undefined,
+  });
   const response = await client.messages.create({
     model: 'claude-opus-4-7',
     max_tokens: 4096,
@@ -119,13 +140,19 @@ async function withRetry<T>(
 }
 
 async function reviewWithGemini(systemPrompt: string, userMessage: string): Promise<string> {
-  const genAI = new GoogleGenerativeAI(config.geminiApiKey);
-  const model = genAI.getGenerativeModel({
+  // Gemini via Vertex AI — same in-memory service account credentials as Claude.
+  const vertexAI = new VertexAI({
+    project: config.gcpProjectId,
+    location: config.gcpLocation,
+    googleAuthOptions: googleAuthOptions(),
+  });
+  const model = vertexAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
     systemInstruction: systemPrompt,
   });
   const result = await withRetry(() => model.generateContent(userMessage));
-  return result.response.text();
+  const parts = result.response.candidates?.[0]?.content?.parts || [];
+  return parts.map((part) => part.text || '').join('');
 }
 
 function removeDiffBlocks(text: string): string {

@@ -4,6 +4,7 @@ import { config } from './config';
 import { handlePullRequestWebhook } from './webhook';
 import { ensureSkillsRepo } from './skills';
 import { verifyBitbucketSignature } from './verifySignature';
+import { loadSecrets } from './secrets';
 import { logger } from './logger';
 
 const app = express();
@@ -48,6 +49,8 @@ app.get('/health', (_req, res) => {
 app.post('/webhook/bitbucket', verifyBitbucketSignature, handlePullRequestWebhook);
 
 async function main() {
+  await loadSecrets();
+
   try {
     await ensureSkillsRepo();
   } catch (err) {

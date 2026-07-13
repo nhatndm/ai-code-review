@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { BitbucketClient, BitbucketWebhookPayload } from './bitbucket';
 import { reviewPullRequest } from './reviewer';
-import { getAccessToken, getRepoType, config } from './config';
+import { getRepoType, config } from './config';
 import { logger } from './logger';
 
 export async function handlePullRequestWebhook(
@@ -52,9 +52,12 @@ export async function handlePullRequestWebhook(
   // Run the review asynchronously
   setImmediate(async () => {
     try {
-      const accessToken = getAccessToken(repoSlug);
       const repoType = getRepoType(repoSlug);
-      const bbClient = new BitbucketClient(accessToken, config.bitbucketWorkspace);
+      const bbClient = new BitbucketClient(
+        config.atlassianEmail,
+        config.atlassianApiToken,
+        config.bitbucketWorkspace
+      );
 
       const diff = await bbClient.getPRDiff(repoSlug, prId);
 
